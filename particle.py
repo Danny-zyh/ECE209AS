@@ -46,11 +46,14 @@ class particle:
         probs = (crash_prob[:,np.newaxis] @ wobble_prob[np.newaxis,:]).flatten()
         return states, probs
 
-    def value_iteration(self, goal=(0,0), gamma=0.5, delta=1e-3):
+    def value_iteration(self, goal=(0,0), gamma=0.5, c=0.2, delta=1e-3):
         '''
         Value iteration to find the optimal policy
         Input:
-            None
+            goal: goal state of the system in which you will receive reward 1
+            gamma: time discount fater
+            c: fuel consumption for each non-zero fi
+            delta: stopping criteria
         Output:
             V: array, value function given state
             policy: array, optimal policy given state
@@ -58,12 +61,12 @@ class particle:
         def state2id(y, v):
             return np.rint(y+self.ymax).astype(int), np.rint(v+self.vmax).astype(int)
         
+        def R(s_not, a, s):
+            return np.array([np.array_equal(si, goal) for si in s_not]) - np.abs(a)*c
+
         state_shape = (2*self.ymax+1, 2*self.vmax+1)
         V = np.zeros(state_shape)
-        R = np.zeros(state_shape)
         policy = np.zeros(state_shape)
-
-        R[state2id(goal[0], goal[1])] = 1
 
         A = np.array([-1, 0, 1])  # action space
         for _ in range(1000):
@@ -74,7 +77,7 @@ class particle:
                     def v_not_plus_r(a):
                         s, p = self.T(y, v, a)
                         sid = state2id(s[:,0], s[:,1])
-                        v_not_plus_r = gamma*V[sid] + R[sid]
+                        v_not_plus_r = gamma*V[sid] + R(s, a, (y, v))
                         return np.sum(v_not_plus_r * p)
 
                     E_v_not_plus_r = np.array([v_not_plus_r(a) for a in A])
@@ -82,7 +85,7 @@ class particle:
                     V[state2id(y, v)] = np.max(E_v_not_plus_r)
                     policy[state2id(y, v)] = A[np.argmax(E_v_not_plus_r)]
                     V[state2id(goal[0], goal[1])] = 0  # always set the goal state to have zero value
-            
+
             # early stopping
             if np.linalg.norm(V_old - V, ord=np.inf) < delta:
                 break
