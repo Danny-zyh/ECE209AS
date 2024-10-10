@@ -90,10 +90,75 @@ class particle:
             if np.linalg.norm(V_old - V, ord=np.inf) < delta:
                 break
         return V, policy
+    
+    def policy_iteration(self, goal=(0,0), gamma=0.5, c=0.2, delta=1e-3):
+        '''
+        Value iteration to find the optimal policy
+        Input:
+            goal: goal state of the system in which you will receive reward 1
+            gamma: time discount fater
+            c: fuel consumption for each non-zero fi
+            delta: stopping criteria
+        Output:
+            V: array, value function given state
+            policy: array, optimal policy given state
+        '''
+
+        def state2id(y, v):
+            return np.rint(y+self.ymax).astype(int), np.rint(v+self.vmax).astype(int)
+        
+        def R(s_not, a, s):
+            return np.array([np.array_equal(si, goal) for si in s_not]) - np.abs(a)*c
+        
+        state_shape = (2*self.ymax+1, 2*self.vmax+1)
+        V = np.zeros(state_shape)
+        policy = np.zeros(state_shape)
+        A = np.array([-1, 0, 1])
+
+        def v_not_plus_r(y, v, a):
+            s, p = self.T(y, v, a)
+            sid = state2id(s[:,0], s[:,1])
+            v_not_plus_r = gamma*V[sid] + R(s, a, (y, v))
+            return np.sum(v_not_plus_r * p)
+
+        def policy_evaluation():
+            for _ in range(1000):
+                V_old = V.copy()
+                for y in range(-self.ymax, self.ymax+1):
+                    for v in range(-self.vmax, self.vmax+1):
+                        V[state2id(y, v)] = v_not_plus_r(y, v, policy[state2id(y, v)])
+                        V[state2id(goal[0], goal[1])] = 0  # always set the goal state to have zero value
+
+                if np.linalg.norm(V_old - V, ord=np.inf) < delta:
+                    break
+        
+        def policy_improvement():
+            policy_stable = False
+            while not policy_stable:
+                policy_stable = True
+                for y in range(-self.ymax, self.ymax+1):
+                    for v in range(-self.vmax, self.vmax+1):
+                        pi = policy[state2id(y, v)]
+                        E_v_not_plus_r = np.array([v_not_plus_r(y, v, a) for a in A])
+                        pi_new = A[np.argmax(E_v_not_plus_r)]
+                        policy[state2id(y, v)] = pi_new
+                        if pi != pi_new:
+                            policy_stable = False
+        
+        for _ in range(100):
+            policy_evaluation()
+            policy_improvement()
+
+        return V, policy
 
 
 if __name__ == "__main__":
     p = particle(ymax=1, vmax=1, pc=0, pw=0, f_phi=lambda y: 0)
     value, policy = p.value_iteration(c=0)
+    print("value iteration")
+    print("value\n", value)
+    print("policy\n", policy)
+    print("policy iteration")
+    value, policy = p.policy_iteration(c=0)
     print("value\n", value)
     print("policy\n", policy)
