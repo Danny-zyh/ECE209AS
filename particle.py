@@ -94,6 +94,6 @@ class particle:
 
 if __name__ == "__main__":
     p = particle(ymax=1, vmax=1, pc=0, pw=0, f_phi=lambda y: 0)
-    value, policy = p.value_iteration()
+    value, policy = p.value_iteration(c=0)
     print("value\n", value)
     print("policy\n", policy)
