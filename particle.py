@@ -1,6 +1,9 @@
 import numpy as np
 
 class particle:
+    """
+    Week 2 implementation of discretized numberline environment
+    """
     def __init__(self, m=1, pc=0.3, pw=0.3, ymax=2, vmax=2, f_phi=lambda y: -2*np.cos(y)):
         self.m = m
         self.pc = pc
@@ -45,6 +48,7 @@ class particle:
 
         probs = (crash_prob[:,np.newaxis] @ wobble_prob[np.newaxis,:]).flatten()
         return states, probs
+
 
     def value_iteration(self, goal=(0,0), gamma=0.5, c=0.2, delta=1e-3):
         '''
@@ -159,6 +163,6 @@ if __name__ == "__main__":
     print("value\n", value)
     print("policy\n", policy)
     print("policy iteration")
-    value, policy = p.policy_iteration(c=0)
+    value, policy = p.policy_iteration(c=0.2)
     print("value\n", value)
     print("policy\n", policy)
