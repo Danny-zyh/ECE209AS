@@ -1,23 +1,23 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
-def R(s_not, a, s, c=0, goal=(0, 0)):
-    return np.array([np.array_equal(si, goal) for si in s_not]) - np.abs(a)*c
+# def R(s_next, a, s, c=0, goal=(0, 0)):
+#     return np.array([np.array_equal(si, goal) for si in s_next]) - np.abs(a)*c
 
 class particle:
     """
     Week 3 implementation of discretizing continuous numberline environment
     """
     def __init__(self, m=1, pc=0.3, pw=0.3, ymax=2, vmax=2, 
-                    dy=0.5, dv=0.5, f_phi=lambda y: -2*np.cos(y)):
+                    dy=0.5, dv=0.5, A=[-1, 0, 1], f_phi=lambda y: -2*np.cos(y)):
         self.m = m
+        self.A = A
         self.pc = pc
         self.pw = pw
         self.f_phi = f_phi
-        self.ymax = np.round(ymax)
-        self.vmax = np.round(vmax)
+        self.ymax = np.rint(ymax)
+        self.vmax = np.rint(vmax)
         self.dy, self.dv = dy, dv
-        self.A = np.array([-1, 0, 1])
         self.yaxis = np.arange(-ymax, ymax+dy, dy)
         self.vaxis = np.arange(-vmax, ymax+dv, dv)
 
@@ -66,7 +66,7 @@ class particle:
         discounted_reward = gamma*V_interp(states) + R(states, a, (y, v))
         return np.sum(discounted_reward * prob)
 
-    def policy_iteration(self, R, gamma=0.99, delta=1e-3):
+    def policy_iteration(self, R, gamma=0.99, delta=1e-3, goal=(0, 0)):
         '''
         Value iteration to find the optimal policy
         Input:
@@ -91,7 +91,7 @@ class particle:
                     for v in self.vaxis:
                         a = policy[self.state2id(y, v)]
                         V[self.state2id(y, v)] = self.E_discounted_reward(y, v, a, V_interp, R, gamma)
-                        V[self.state2id(0, 0)] = 0  # always set the goal state to have zero value
+                        V[self.state2id(*goal)] = 0  # always set the goal state to have zero value
 
                 if np.linalg.norm(V_old - V, ord=np.inf) < delta:
                     break
@@ -119,13 +119,17 @@ class particle:
 
         return V, policy
 
-    def simulate_trajectory(self, V, policy, y0, v0, gamma=0.99, look_ahead=True, mode="4nn", timesteps=10):
+    def simulate_trajectory(self, V, policy, y0, v0, R, gamma=0.99, goal=(0,0), look_ahead=True, mode="4nn", timesteps=10):
         y, v = y0, v0
         V_interp = RegularGridInterpolator((self.yaxis, self.vaxis), V)
         trajectory = [(y, v)]
         control = []
 
-        for _ in range(timesteps):
+        t = 0
+        while not np.allclose((y, v), goal, atol=self.dv):
+            if t > timesteps:
+                break
+            t += 1
             if look_ahead:
                 # if look_ahead we assume only use 4nn
                 Q_a = [
@@ -148,8 +152,11 @@ class particle:
 
             control.append(fi)
             states, probs = self.T(y, v, fi)
-            y, v = np.random.choice(states, p=probs)
+            idx = np.random.choice(len(states), p=probs)
+            y, v = states[idx]
             trajectory.append((y, v))
+
+        return trajectory, control
 
 
 if __name__ == "__main__":
