@@ -1,4 +1,8 @@
 # EC ENGR 209AS Code Gallary
 
 ## Files
-- `particle_d.py` is an implementation 
+- `code` contains the algorithms for solving the numberline problems
+- `notebooks` contains the notebook for our graphs and experiments
+
+## Dependencies
+scipy, numpy, matplotlib, seaborn
