@@ -119,7 +119,7 @@ class particle:
 
         return V, policy
 
-    def simulate_trajectory(self, V, policy, y0, v0, R, gamma=0.99, goal=(0,0), look_ahead=True, mode="4nn", timesteps=10):
+    def simulate_trajectory(self, V, policy, y0, v0, R, gamma=0.99, goal=(0,0), look_ahead=True, mode="4nn", timesteps=100):
         y, v = y0, v0
         V_interp = RegularGridInterpolator((self.yaxis, self.vaxis), V)
         trajectory = [(y, v)]
@@ -139,16 +139,16 @@ class particle:
                 fi = self.A[np.argmax(Q_a)]
             else:
                 if mode == "1nn":
-                    y, v = np.rint(y/self.dy)*self.dy, np.rint(v/self.dv)*self.dv
+                    y_snap, v_snap = np.rint(y/self.dy)*self.dy, np.rint(v/self.dv)*self.dv
                 elif mode == "4nn":
                     yh, yl = np.ceil(y/self.dy)*self.dy, np.floor(y/self.dy)*self.dy
                     vh, vl = np.ceil(v/self.dv)*self.dv, np.floor(v/self.dv)*self.dv
 
                     py, pv = (y - yl) / self.dy, (v - vl) / self.dv
-                    y = yl if np.random.uniform() < py else yh
-                    v = vl if np.random.uniform() < pv else vh
+                    y_snap = yl if np.random.uniform() < py else yh
+                    v_snap = vl if np.random.uniform() < pv else vh
 
-                fi = policy[self.state2id(y, v)]
+                fi = policy[self.state2id(y_snap, v_snap)]
 
             control.append(fi)
             states, probs = self.T(y, v, fi)
@@ -156,7 +156,7 @@ class particle:
             y, v = states[idx]
             trajectory.append((y, v))
 
-        return trajectory, control
+        return np.array(trajectory), np.array(control)
 
 
 if __name__ == "__main__":
