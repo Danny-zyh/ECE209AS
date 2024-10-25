@@ -31,11 +31,18 @@ class particle:
 
         return y, v
     
+    def two_step_dynamic(self, y, v, f1, f2):
+        y2 = (y+2*v) + 1/self.m * (self.f_phi(y) + f1)
+        v2 = v + 1/self.m * (f1 + f2 + self.f_phi(y) + self.f_phi(y+v))
+
+        return y2, v2
+    
+    
     def inverse_2_step_dynamic(self, s1, s2):
         y, v = s1
         y_naught, v_naught = s2
-        f1 = (y_naught - (y + 2*v + 1/self.m*self.f_phi(y)))*self.m
-        f2 = (v_naught - (v + 1/self.m*self.f_phi(y) + 1/self.m*self.f_phi(y+v)) - 1/self.m*f1)*self.m
+        f1 = (y_naught - (y+2*v) - 1/self.m*self.f_phi(y))*self.m
+        f2 = (v_naught - v - 1/self.m*(f1+self.f_phi(y)+self.f_phi(y+v)))*self.m
         return f1, f2
 
     def connectable(self, s1, s2):
@@ -49,7 +56,7 @@ class particle:
         return -1 <= f1 <= 1 and -1 <= f2 <= 1
 
     def build_prm(self, N=100, radius=5):
-        G = nx.Graph()
+        G = nx.DiGraph()
 
         ys = np.random.uniform(low=-self.ymax, high=self.ymax, size=N)
         vs = np.random.uniform(low=-self.vmax, high=self.vmax, size=N)
@@ -63,8 +70,11 @@ class particle:
         for node in G.nodes:
             neighbors = data[kdt.query_ball_point(node, radius), :]
             for neighbor in neighbors:
-                if self.connectable(neighbor, node) and self.connectable(node, neighbor):
+                if self.connectable(neighbor, node):
                     if not nx.algorithms.has_path(G, tuple(neighbor), node):
                             G.add_edge(tuple(neighbor), node)
+                if self.connectable(node, neighbor):
+                    if not nx.algorithms.has_path(G, tuple(neighbor), node):
+                            G.add_edge(node, tuple(neighbor))
 
         return G
