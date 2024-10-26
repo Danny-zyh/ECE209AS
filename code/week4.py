@@ -23,20 +23,19 @@ class particle:
             states: array, an array of possible state
             probs: array, an array of probabilities of arriving at the states
         '''
-        y += v
-        v += (1 / self.m) * (fi + self.f_phi(y))
+        y_next = y + v
+        v_next = v + (1 / self.m) * (fi + self.f_phi(y))
 
-        y = np.clip(y, -self.ymax, self.ymax)
-        v = np.clip(v, -self.vmax, self.vmax)
+        y_next = np.clip(y_next, -self.ymax, self.ymax)
+        v_next = np.clip(v_next, -self.vmax, self.vmax)
 
-        return y, v
+        return y_next, v_next
     
     def two_step_dynamic(self, y, v, f1, f2):
         y2 = (y+2*v) + 1/self.m * (self.f_phi(y) + f1)
         v2 = v + 1/self.m * (f1 + f2 + self.f_phi(y) + self.f_phi(y+v))
 
         return y2, v2
-    
     
     def inverse_2_step_dynamic(self, s1, s2):
         y, v = s1
@@ -55,8 +54,9 @@ class particle:
         f1, f2 = self.inverse_2_step_dynamic(s1, s2)
         return -1 <= f1 <= 1 and -1 <= f2 <= 1
 
-    def build_prm(self, N=100, radius=5):
-        G = nx.DiGraph()
+    def build_prm(self, G=None, N=100, radius=5):
+        if G is None:
+            G = nx.DiGraph()
 
         ys = np.random.uniform(low=-self.ymax, high=self.ymax, size=N)
         vs = np.random.uniform(low=-self.vmax, high=self.vmax, size=N)
@@ -72,9 +72,28 @@ class particle:
             for neighbor in neighbors:
                 if self.connectable(neighbor, node):
                     if not nx.algorithms.has_path(G, tuple(neighbor), node):
-                            G.add_edge(tuple(neighbor), node)
+                        G.add_edge(tuple(neighbor), node)
                 if self.connectable(node, neighbor):
                     if not nx.algorithms.has_path(G, tuple(neighbor), node):
-                            G.add_edge(node, tuple(neighbor))
+                        G.add_edge(node, tuple(neighbor))
 
         return G
+
+    def find_path(self, G, s1, s2):
+        starts = filter(lambda n: self.connectable(s1, n), G.nodes)
+        ends = filter(lambda n: self.connectable(n, s2), G.nodes)
+
+        for s in starts:
+            for e in ends:
+                if nx.algorithms.has_path(G, s, e):
+                    path = [s1] + nx.shortest_path(G, s, e) + [s2]
+                    force = []
+                    for i in range(len(path)-1):
+                        force += list(self.inverse_2_step_dynamic(path[i], path[i+1]))
+
+                    trajectory = [s1]
+                    for fi in force:
+                        trajectory.append(self.T(*trajectory[-1], fi))
+                    return trajectory, force
+        
+        return None
