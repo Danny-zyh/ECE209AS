@@ -12,7 +12,7 @@ class particle:
         self.ymax = ymax
         self.vmax = vmax
 
-    def T(self, y, v, fi):
+    def T(self, y, v, fi, noise_amplitude=0):
         '''
         Calculate the transition probability
         Input:
@@ -25,6 +25,8 @@ class particle:
         '''
         y_next = y + v
         v_next = v + (1 / self.m) * (fi + self.f_phi(y))
+
+        v_next += np.random.normal(loc=0, scale=noise_amplitude)
 
         y_next = np.clip(y_next, -self.ymax, self.ymax)
         v_next = np.clip(v_next, -self.vmax, self.vmax)
@@ -79,7 +81,7 @@ class particle:
 
         return G
 
-    def find_path(self, G, s1, s2):
+    def find_path(self, G, s1, s2, noise_amplitude=0):
         starts = filter(lambda n: self.connectable(s1, n), G.nodes)
         ends = filter(lambda n: self.connectable(n, s2), G.nodes)
 
@@ -93,7 +95,7 @@ class particle:
 
                     trajectory = [s1]
                     for fi in force:
-                        trajectory.append(self.T(*trajectory[-1], fi))
+                        trajectory.append(self.T(*trajectory[-1], fi, noise_amplitude))
                     return trajectory, force
         
         return None
