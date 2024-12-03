@@ -6,7 +6,7 @@ class particle:
     """
     Week 7
     """
-    def __init__(self, m=1, qv2=0.1, rv2=0.1, ry2=0.1, rvy=0, f_phi=lambda _: 0):
+    def __init__(self, m=1, qv2=0.1, rv2=0.1, ry2=0.1, rvy=0, f_phi=lambda: 0):
         self.m = m
         self.f_phi = f_phi
         self.qv2 = qv2 # variance of process noise
@@ -21,22 +21,22 @@ class particle:
 
     def T(self, s, fi, nq=None):
         if nq is None:
-            nq = lambda _: np.random.multivariate_normal(np.zeros(2), self.Q)
+            nq = lambda: np.random.multivariate_normal(np.zeros(2), self.Q)
         
-        return self.A @ s + self.B @ np.array([0, fi]) + nq()
+        return self.A @ s + self.B @ np.array([fi]) + nq()
     
     def O(self, s, nr=None):
         if nr is None:
-            nr = lambda _: np.random.multivariate_normal(np.zeros(2), self.R)
+            nr = lambda: np.random.multivariate_normal(np.zeros(2), self.R)
         
         return self.C @ s + nr()
     
     def kf_gain(self):
-        K, *_ = ct.lqe(self.A, np.eye(2), self.C, self.Q, self.R)
+        K, *_ = ct.dlqe(self.A, np.eye(2), self.C, self.Q, self.R)
         return K
     
     def dynamic_update(self, mu, sigma, fi):
-        mu_ = self.A @ mu + self.B @ np.array([0, fi])
+        mu_ = self.A @ mu + self.B @ np.array([fi])
         sigma_ = self.A @ sigma @ self.A.T + self.Q
         return mu_, sigma_
 

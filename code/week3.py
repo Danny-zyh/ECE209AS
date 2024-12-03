@@ -119,7 +119,12 @@ class particle:
 
         return V, policy
 
-    def simulate_trajectory(self, V, policy, y0, v0, R, gamma=0.99, goal=(0,0), look_ahead=True, mode="4nn", timesteps=100):
+    def simulate_trajectory(self, V, policy, y0, v0, R, 
+                                gamma=0.99, 
+                                goal=(0,0), 
+                                look_ahead=True, 
+                                mode="4nn", 
+                                timesteps=100):
         y, v = y0, v0
         V_interp = RegularGridInterpolator((self.yaxis, self.vaxis), V)
         trajectory = [(y, v)]
